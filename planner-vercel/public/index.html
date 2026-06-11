@@ -383,14 +383,82 @@ async function startAnalysis() {
 
 function setStep(n,s){const el=document.getElementById('lstep-'+n);el.className='lstep'+(s?' '+s:'')}
 
-function renderGradeTable(grades,avg,summary){
-  const wrap=document.getElementById('grade-table-wrap')
-  if (!grades||!grades.length){wrap.innerHTML=`<p style="color:var(--text2);font-size:13px">${summary||'등급 정보를 추출했어요.'}</p>`}
-  else{
-    wrap.innerHTML=`<table class="grade-table"><thead><tr><th>학년</th><th>학기</th><th>과목</th><th>등급</th></tr></thead><tbody>${grades.map(g=>`<tr><td>${g.year}</td><td>${g.semester}</td><td>${g.subject}</td><td><strong>${g.grade}등급</strong></td></tr>`).join('')}</tbody></table>`
-    if(summary) wrap.insertAdjacentHTML('beforeend',`<p style="font-size:12px;color:var(--text2);margin-top:10px">${summary}</p>`)
+let currentGrades = []
+
+function renderGradeTable(grades, avg, summary) {
+  currentGrades = grades ? [...grades] : []
+  const wrap = document.getElementById('grade-table-wrap')
+
+  if (!grades || !grades.length) {
+    wrap.innerHTML = `<p style="color:var(--text2);font-size:13px">${summary||'등급 정보를 추출했어요.'}</p>`
+  } else {
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p style="font-size:12px;color:var(--text2)">AI가 추출한 등급을 직접 수정할 수 있어요.</p>
+        <button onclick="addGradeRow()" style="padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">+ 행 추가</button>
+      </div>
+      <table class="grade-table" id="editable-grade-table">
+        <thead>
+          <tr>
+            <th>학년</th><th>학기</th><th>과목</th><th>등급</th><th>삭제</th>
+          </tr>
+        </thead>
+        <tbody id="grade-tbody">
+          ${grades.map((g,i) => renderGradeRow(g, i)).join('')}
+        </tbody>
+      </table>
+      <button onclick="recalcFromTable()" style="margin-top:12px;width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">수정 완료 → 평균 재계산</button>`
+    if (summary) wrap.insertAdjacentHTML('beforeend', `<p style="font-size:12px;color:var(--text2);margin-top:8px">${summary}</p>`)
   }
-  document.getElementById('avg-display').textContent=avg?avg.toFixed(2)+' 등급':'—'
+  document.getElementById('avg-display').textContent = avg ? avg.toFixed(2)+' 등급' : '—'
+}
+
+function renderGradeRow(g, i) {
+  return `<tr id="grade-row-${i}">
+    <td><select onchange="updateGrade(${i},'year',this.value)" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;font-family:inherit">
+      ${['1학년','2학년','3학년'].map(y=>`<option value="${y}"${g.year===y?' selected':''}>${y}</option>`).join('')}
+    </select></td>
+    <td><select onchange="updateGrade(${i},'semester',this.value)" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;font-family:inherit">
+      ${['1학기','2학기'].map(s=>`<option value="${s}"${g.semester===s?' selected':''}>${s}</option>`).join('')}
+    </select></td>
+    <td><input value="${g.subject}" onchange="updateGrade(${i},'subject',this.value)" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:90px;font-family:inherit"></td>
+    <td><select onchange="updateGrade(${i},'grade',parseInt(this.value))" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;font-family:inherit">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}"${g.grade===n?' selected':''}>${n}등급</option>`).join('')}
+    </select></td>
+    <td><button onclick="deleteGradeRow(${i})" style="background:#FEE2E2;color:#991B1B;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px">삭제</button></td>
+  </tr>`
+}
+
+function updateGrade(i, key, val) {
+  currentGrades[i][key] = val
+}
+
+function deleteGradeRow(i) {
+  currentGrades.splice(i, 1)
+  const tbody = document.getElementById('grade-tbody')
+  tbody.innerHTML = currentGrades.map((g,idx) => renderGradeRow(g,idx)).join('')
+  recalcAvg()
+}
+
+function addGradeRow() {
+  currentGrades.push({ year:'1학년', semester:'1학기', subject:'과목명', grade:3 })
+  const tbody = document.getElementById('grade-tbody')
+  tbody.innerHTML = currentGrades.map((g,i) => renderGradeRow(g,i)).join('')
+}
+
+function recalcAvg() {
+  if (!currentGrades.length) return
+  const avg = currentGrades.reduce((s,g)=>s+g.grade,0)/currentGrades.length
+  document.getElementById('avg-display').textContent = avg.toFixed(2)+' 등급'
+  return avg
+}
+
+function recalcFromTable() {
+  const avg = recalcAvg()
+  if (!avg) return
+  allResults = getRecommendations(avg, state.major, state.csat, state.type)
+  renderResultSection(avg)
+  document.getElementById('result-section').scrollIntoView({behavior:'smooth',block:'start'})
 }
 
 let UNIV_DB=[]
@@ -398,7 +466,7 @@ let UNIV_DB=[]
 // CSV 파일에서 대학 데이터 로드
 async function loadUnivData() {
   try {
-    const res = await fetch('/universities.csv')
+    const res = await fetch('/data/universities.csv')
     const text = await res.text()
     const lines = text.trim().split('\n')
     const headers = lines[0].split(',')
@@ -478,7 +546,7 @@ function getRecommendations(avg,major,csat,type){
     if(csat==='불가'&&u.csat)return false
     if(type&&type!=='모두'&&!u.types.includes(type))return false
     return true
-  }).map(u=>({...u,chance:avg<=u.min+0.3?'high':avg<=u.max-0.3?'mid':'low'})).sort((a,b)=>a.min-b.min)
+  }).map(u=>({...u,chance:avg<=u.min+0.3?'low':avg<=u.max-0.3?'mid':'high'})).sort((a,b)=>a.min-b.min)
 }
 
 function renderResultSection(avg){
