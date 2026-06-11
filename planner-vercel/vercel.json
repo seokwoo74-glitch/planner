@@ -4,9 +4,9 @@
     { "source": "/(.*)", "destination": "/public/index.html" }
   ],
   "functions": {
-    "api/*.js": {
+    "api/analyze.js": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 60
     }
   }
 }
