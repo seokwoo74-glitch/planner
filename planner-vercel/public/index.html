@@ -466,7 +466,7 @@ let UNIV_DB=[]
 // CSV 파일에서 대학 데이터 로드
 async function loadUnivData() {
   try {
-    const res = await fetch('/data/universities.csv')
+    const res = await fetch('/universities.csv')
     const text = await res.text()
     const lines = text.trim().split('\n')
     const headers = lines[0].split(',')
