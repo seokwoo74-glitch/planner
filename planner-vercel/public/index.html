@@ -478,7 +478,7 @@ function getRecommendations(avg,major,csat,type){
     if(csat==='불가'&&u.csat)return false
     if(type&&type!=='모두'&&!u.types.includes(type))return false
     return true
-  }).map(u=>({...u,chance:avg<=u.min+0.3?'low':avg<=u.max-0.3?'mid':'high'})).sort((a,b)=>a.min-b.min)
+  }).map(u=>({...u,chance:avg<=u.min+0.3?'high':avg<=u.max-0.3?'mid':'low'})).sort((a,b)=>a.min-b.min)
 }
 
 function renderResultSection(avg){
