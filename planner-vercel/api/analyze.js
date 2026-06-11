@@ -1,6 +1,6 @@
 // api/analyze.js — Vercel 서버리스 함수
 // ⚠️ 아래 API 키를 실제 키로 교체하세요
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_API_KEY = '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'
 
 export default async function handler(req, res) {
   // CORS
