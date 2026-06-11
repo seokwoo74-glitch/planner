@@ -12,18 +12,15 @@ module.exports = async function handler(req, res) {
     const { images } = req.body
     if (!images || !images.length) return res.status(400).json({ error: '이미지가 없어요.' })
 
-    const systemPrompt = `당신은 대한민국 고등학교 학생부(생활기록부)에서 내신 등급 정보를 추출하는 전문가입니다.
-학생부 이미지를 분석하여 학년별·과목별 내신 석차등급을 추출하고 반드시 아래 JSON 형식으로만 응답하세요.
-다른 텍스트 없이 JSON만 출력하세요.
+    const systemPrompt = `You are a Korean high school transcript analyzer.
+CRITICAL: You MUST respond with ONLY valid JSON. No explanations, no apologies, no other text whatsoever.
+Even if the image is unclear, do your best and respond with JSON only.
+If you truly cannot read anything, respond with: {"grades":[],"average":0,"summary":"이미지를 읽을 수 없어요"}
 
-{
-  "grades": [
-    {"year": "1학년", "semester": "1학기", "subject": "국어", "grade": 3},
-    {"year": "1학년", "semester": "1학기", "subject": "수학", "grade": 4}
-  ],
-  "average": 3.5,
-  "summary": "1학년 평균 3.2, 2학년 평균 3.8, 3학년 1학기 평균 3.5"
-}`
+Extract 석차등급 (grade 1-9) from Korean school transcript (학생부/생활기록부) images.
+
+Respond ONLY with this exact JSON format, nothing else:
+{"grades":[{"year":"1학년","semester":"1학기","subject":"국어","grade":3}],"average":3.5,"summary":"1학년 평균 3.2, 2학년 평균 3.8, 3학년 1학기 평균 3.5"}`
 
     const imageContents = images.map(img => ({
       type: 'image_url',
